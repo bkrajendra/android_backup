@@ -1,6 +1,6 @@
 # Android Backup and resume shell script
 
-Copy and photos from android mobile to PC with option to resume if download breaks in between.
+> Copy and photos from android mobile to PC with option to resume if download breaks in between.
 
 ## Usage
 
@@ -43,6 +43,9 @@ If all above stuff works, you are ready to start.
 Run the shell script as follows:
 
 - On windows open the git bash or MobaXterm (Windows paths might be different on both terminals)
+
 ```
 ./backup.sh [-r remote_folder] [-l local_folder]
 e.g. ./backup.sh sdcard/DCIM/Camera /f/Photo/A52
+```
+> If download breaks, re-run the script with same parameters, script will resume from last download.
