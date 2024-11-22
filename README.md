@@ -1,6 +1,6 @@
-# Android Backup and resume shell script
+# Android Backup and resume - a shell script
 
-> Copy and photos from android mobile to PC with option to resume if download breaks in between.
+> Copy files and photos from android mobile to PC with option to resume if download breaks in between.
 
 ## Usage
 
