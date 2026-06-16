@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Android Backup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .scrollbar::-webkit-scrollbar { width: 4px; }
+  .scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+  .fade-in { animation: fadeIn 0.15s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<!-- HEADER -->
+<header class="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+    </svg>
+    <span class="font-semibold text-white text-sm tracking-wide">Android Backup</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <div id="ws-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
+    <span id="ws-label" class="text-xs text-gray-400">disconnected</span>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="flex h-[calc(100vh-49px)]">
+
+  <!-- LEFT: Devices + Android FS -->
+  <aside class="w-72 border-r border-gray-800 flex flex-col">
+
+    <!-- Device Panel -->
+    <div class="p-4 border-b border-gray-800">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Devices</span>
+        <button onclick="refreshDevices()"
+          class="text-xs text-gray-400 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800">
+          Refresh
+        </button>
+      </div>
+
+      <div id="device-list" class="space-y-1 mb-3"></div>
+
+      <!-- WiFi Connect -->
+      <div class="mt-2">
+        <div class="flex gap-1">
+          <input id="wifi-addr" type="text" placeholder="192.168.1.x:5555"
+            class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1.5 focus:outline-none focus:border-green-500 text-gray-200 placeholder-gray-600" />
+          <button onclick="connectWifi()"
+            class="text-xs px-2 py-1 bg-green-600 hover:bg-green-500 rounded text-white font-medium transition">
+            Connect
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Android File Browser -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="px-4 pt-3 pb-1 flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Android Files</span>
+        <button id="browse-up-btn" onclick="browseUp()" style="display:none"
+          class="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-800 transition">↑ Up</button>
+      </div>
+      <div id="android-path" class="px-4 py-1 text-xs text-green-400 font-mono truncate">/storage</div>
+      <div id="android-browser" class="flex-1 overflow-y-auto scrollbar px-2 pb-2 space-y-0.5"></div>
+    </div>
+
+  </aside>
+
+  <!-- CENTER: Transfer Setup + Queue -->
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Transfer Setup Bar -->
+    <div class="border-b border-gray-800 px-6 py-4">
+      <div class="flex gap-4 items-end">
+        <div class="flex-1">
+          <label class="text-xs text-gray-400 mb-1 block">Source (Android)</label>
+          <div class="flex gap-1">
+            <input id="remote-dir" type="text" placeholder="/sdcard/DCIM/Camera"
+              class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-3 py-2 focus:outline-none focus:border-green-500 text-gray-200 placeholder-gray-600 font-mono" />
+            <button onclick="useSelectedAndroid()"
+              class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 transition" title="Use current Android path">
+              ← Use
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1">
+          <label class="text-xs text-gray-400 mb-1 block">Destination (Local)</label>
+          <div class="flex gap-1">
+            <input id="local-dir" type="text" placeholder="C:\Users\...\CameraBackup"
+              class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-3 py-2 focus:outline-none focus:border-green-500 text-gray-200 placeholder-gray-600 font-mono" />
+            <button onclick="openLocalBrowser()"
+              class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 transition">Browse</button>
+          </div>
+        </div>
+
+        <button onclick="startTransfer()"
+          class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded transition">
+          Start Transfer
+        </button>
+      </div>
+    </div>
+
+    <!-- Transfer Queue -->
+    <div class="flex-1 overflow-y-auto scrollbar p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-gray-300">Transfers</h2>
+        <div class="flex items-center gap-3">
+          <span id="transfer-count" class="text-xs text-gray-500"></span>
+          <button id="clear-btn" onclick="clearFinished()" style="display:none"
+            class="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition">
+            Clear finished
+          </button>
+        </div>
+      </div>
+      <div id="transfer-list" class="space-y-3"></div>
+      <div id="no-transfers" class="text-center text-gray-600 text-sm mt-16">
+        No transfers yet. Select a source and destination, then click <em>Start Transfer</em>.
+      </div>
+    </div>
+
+  </main>
+
+  <!-- RIGHT: Local FS Browser (slide-in panel) -->
+  <aside id="local-panel" class="w-72 border-l border-gray-800 flex-col hidden">
+    <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+      <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Local Folder</span>
+      <button onclick="closeLocalBrowser()" class="text-gray-500 hover:text-white transition">✕</button>
+    </div>
+    <div id="local-path" class="px-4 py-2 text-xs text-blue-400 font-mono truncate"></div>
+    <div id="local-browser" class="flex-1 overflow-y-auto scrollbar px-2 pb-2 space-y-0.5"></div>
+    <div class="p-3 border-t border-gray-800">
+      <button onclick="selectLocalDir()"
+        class="w-full text-sm py-2 bg-blue-600 hover:bg-blue-500 rounded text-white font-medium transition">
+        Select This Folder
+      </button>
+    </div>
+  </aside>
+
+</div>
+
+<!-- RENAME MODAL -->
+<div id="rename-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
+  <div class="bg-gray-900 border border-gray-700 rounded-xl p-6 w-96 fade-in">
+    <h3 class="text-sm font-semibold mb-4">Rename / Move</h3>
+    <input id="rename-new" type="text"
+      class="w-full text-sm bg-gray-800 border border-gray-700 rounded px-3 py-2 focus:outline-none focus:border-green-500 text-gray-200 font-mono mb-4" />
+    <div class="flex justify-end gap-2">
+      <button onclick="closeRenameModal()" class="text-sm px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition">Cancel</button>
+      <button onclick="confirmRename()" class="text-sm px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white font-medium transition">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div id="delete-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
+  <div class="bg-gray-900 border border-gray-700 rounded-xl p-6 w-96 fade-in">
+    <h3 class="text-sm font-semibold mb-2">Delete from device?</h3>
+    <p id="delete-path-label" class="text-xs text-gray-400 font-mono mb-4 break-all"></p>
+    <div class="flex justify-end gap-2">
+      <button onclick="closeDeleteModal()" class="text-sm px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition">Cancel</button>
+      <button onclick="confirmDelete()" class="text-sm px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white font-medium transition">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+  <div id="toast-inner" class="px-4 py-2.5 rounded-lg text-sm font-medium shadow-xl fade-in"></div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  selectedDevice: null,
+  androidPath: '/storage',
+  androidPathStack: [],
+  selectedAndroidPath: null,
+  localBrowserPath: '',
+  localBrowserPathStack: [],
+  renameTarget: null,
+  deleteTarget: null,
+  transfers: {},
+};
+
+// ============================================================
+// WEBSOCKET
+// ============================================================
+let ws;
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    setWSDot(true);
+    refreshDevices();
+    refreshTransfers();
+  };
+  ws.onclose = () => {
+    setWSDot(false);
+    setTimeout(connectWS, 3000);
+  };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'transfer_update') {
+      state.transfers[msg.transfer.id] = msg.transfer;
+      renderTransfers();
+    }
+  };
+}
+
+function setWSDot(connected) {
+  const dot = document.getElementById('ws-dot');
+  const label = document.getElementById('ws-label');
+  dot.className = `w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`;
+  label.textContent = connected ? 'connected' : 'disconnected';
+}
+
+// ============================================================
+// API HELPERS
+// ============================================================
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  const inner = document.getElementById('toast-inner');
+  const colors = {
+    info: 'bg-gray-800 text-gray-100',
+    success: 'bg-green-700 text-white',
+    error: 'bg-red-700 text-white',
+    warn: 'bg-yellow-700 text-white',
+  };
+  inner.className = `px-4 py-2.5 rounded-lg text-sm font-medium shadow-xl fade-in ${colors[type] || colors.info}`;
+  inner.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3500);
+}
+
+// ============================================================
+// DEVICES
+// ============================================================
+async function refreshDevices() {
+  try {
+    const devices = await api('GET', '/api/devices');
+    renderDevices(devices);
+    if (devices.length === 1 && !state.selectedDevice) {
+      selectDevice(devices[0]);
+    }
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function renderDevices(devices) {
+  const el = document.getElementById('device-list');
+  if (!devices || devices.length === 0) {
+    el.innerHTML = `<p class="text-xs text-gray-600 py-1">No devices connected.</p>`;
+    return;
+  }
+  el.innerHTML = devices.map(d => {
+    const active = state.selectedDevice?.serial === d.serial;
+    const badge = d.transport === 'wifi'
+      ? '<span class="text-blue-400 text-[10px] ml-1">WiFi</span>'
+      : '<span class="text-gray-500 text-[10px] ml-1">USB</span>';
+    return `
+      <div onclick="selectDevice(${JSON.stringify(d).replace(/"/g,'&quot;')})"
+        class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition
+          ${active ? 'bg-green-900/40 border border-green-700/50' : 'hover:bg-gray-800'}">
+        <svg class="w-4 h-4 ${active ? 'text-green-400' : 'text-gray-500'}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium truncate">${d.model || 'Android Device'}${badge}</div>
+          <div class="text-[10px] text-gray-500 font-mono truncate">${d.serial}</div>
+        </div>
+        ${active ? '<div class="w-1.5 h-1.5 rounded-full bg-green-400"></div>' : ''}
+      </div>`;
+  }).join('');
+}
+
+function selectDevice(d) {
+  state.selectedDevice = d;
+  refreshDevices();
+  browseAndroid(state.androidPath);
+}
+
+async function connectWifi() {
+  const addr = document.getElementById('wifi-addr').value.trim();
+  if (!addr) return;
+  try {
+    const res = await api('POST', '/api/devices/connect', { address: addr });
+    toast(res.message, 'success');
+    setTimeout(refreshDevices, 1000);
+    document.getElementById('wifi-addr').value = '';
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// ANDROID FILE BROWSER
+// ============================================================
+async function browseAndroid(path) {
+  if (!state.selectedDevice) { toast('Select a device first', 'warn'); return; }
+  const el = document.getElementById('android-browser');
+  el.innerHTML = `<div class="flex items-center gap-2 px-3 py-2 text-xs text-gray-500"><svg class="w-3 h-3 spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Loading…</div>`;
+
+  try {
+    const entries = await api('GET', `/api/android/browse?serial=${encodeURIComponent(state.selectedDevice.serial)}&path=${encodeURIComponent(path)}`);
+    state.androidPath = path;
+    document.getElementById('android-path').textContent = path;
+    document.getElementById('browse-up-btn').style.display = path === '/' ? 'none' : '';
+    renderAndroidEntries(entries || []);
+  } catch (e) {
+    el.innerHTML = `<p class="text-xs text-red-400 px-3 py-2">${e.message}</p>`;
+  }
+}
+
+function renderAndroidEntries(entries) {
+  const el = document.getElementById('android-browser');
+  if (!entries.length) {
+    el.innerHTML = `<p class="text-xs text-gray-600 px-3 py-2">Empty directory.</p>`;
+    return;
+  }
+
+  // Sort: dirs first, then files
+  entries.sort((a, b) => {
+    if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  el.innerHTML = entries.map(e => {
+    const icon = e.isDir
+      ? `<svg class="w-4 h-4 text-yellow-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h4l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>`
+      : `<svg class="w-4 h-4 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+    const size = e.isDir ? '' : `<span class="text-[10px] text-gray-600 ml-auto shrink-0">${formatBytes(e.size)}</span>`;
+    const pathJson = JSON.stringify(e.path).replace(/"/g,'&quot;');
+    const nameJson = JSON.stringify(e.name).replace(/"/g,'&quot;');
+    const isDir = e.isDir;
+
+    return `
+      <div class="group flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-800 cursor-pointer text-xs"
+        onclick="${isDir ? `navigateAndroid(${pathJson})` : `selectAndroidFile(${pathJson})`}">
+        ${icon}
+        <span class="truncate flex-1 text-gray-200">${esc(e.name)}</span>
+        ${size}
+        <div class="hidden group-hover:flex items-center gap-0.5 ml-1 shrink-0">
+          <button class="p-0.5 text-gray-500 hover:text-yellow-400 transition"
+            onclick="event.stopPropagation(); openRenameModal(${pathJson})"
+            title="Rename">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+          <button class="p-0.5 text-gray-500 hover:text-red-400 transition"
+            onclick="event.stopPropagation(); openDeleteModal(${pathJson})"
+            title="Delete">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function navigateAndroid(path) {
+  state.androidPathStack.push(state.androidPath);
+  browseAndroid(path);
+}
+
+function browseUp() {
+  const parent = state.androidPath.split('/').slice(0, -1).join('/') || '/';
+  browseAndroid(parent);
+}
+
+function selectAndroidFile(path) {
+  state.selectedAndroidPath = path;
+  toast(`Selected: ${path}`, 'info');
+}
+
+function useSelectedAndroid() {
+  document.getElementById('remote-dir').value = state.androidPath;
+}
+
+// ============================================================
+// LOCAL FILE BROWSER
+// ============================================================
+async function openLocalBrowser() {
+  document.getElementById('local-panel').classList.remove('hidden');
+  document.getElementById('local-panel').classList.add('flex');
+  browseLocal('');
+}
+
+function closeLocalBrowser() {
+  document.getElementById('local-panel').classList.add('hidden');
+  document.getElementById('local-panel').classList.remove('flex');
+}
+
+async function browseLocal(path) {
+  const el = document.getElementById('local-browser');
+  el.innerHTML = `<div class="text-xs text-gray-500 px-3 py-2">Loading…</div>`;
+  try {
+    const entries = await api('GET', `/api/local/browse${path ? '?path=' + encodeURIComponent(path) : ''}`);
+    state.localBrowserPath = path;
+    document.getElementById('local-path').textContent = path || 'Drives';
+    renderLocalEntries(entries || []);
+  } catch (e) {
+    el.innerHTML = `<p class="text-xs text-red-400 px-3 py-2">${e.message}</p>`;
+  }
+}
+
+function renderLocalEntries(entries) {
+  const el = document.getElementById('local-browser');
+  const backBtn = state.localBrowserPath
+    ? `<div class="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-800 cursor-pointer text-xs text-gray-400"
+          onclick="browseLocalUp()">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          ..
+        </div>` : '';
+
+  const dirs = entries.filter(e => e.isDir);
+
+  el.innerHTML = backBtn + dirs.map(e => `
+    <div class="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-800 cursor-pointer text-xs"
+      onclick="navigateLocal(${JSON.stringify(e.path).replace(/"/g,'&quot;')})">
+      <svg class="w-4 h-4 text-yellow-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h4l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+      <span class="truncate text-gray-200">${esc(e.name)}</span>
+    </div>`).join('');
+}
+
+function navigateLocal(path) {
+  browseLocal(path);
+}
+
+function browseLocalUp() {
+  const parts = state.localBrowserPath.replace(/\\/g, '/').split('/').filter(Boolean);
+  if (parts.length <= 1) {
+    browseLocal('');
+    return;
+  }
+  parts.pop();
+  const parent = parts.join('/');
+  browseLocal(parent.includes(':') && !parent.includes('/') ? parent + '\\' : parent);
+}
+
+function selectLocalDir() {
+  if (!state.localBrowserPath) { toast('Navigate into a folder first', 'warn'); return; }
+  document.getElementById('local-dir').value = state.localBrowserPath;
+  closeLocalBrowser();
+  toast(`Destination set: ${state.localBrowserPath}`, 'success');
+}
+
+// ============================================================
+// RENAME MODAL
+// ============================================================
+function openRenameModal(path) {
+  state.renameTarget = path;
+  const name = path.split('/').pop();
+  document.getElementById('rename-new').value = path;
+  document.getElementById('rename-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('rename-new').focus(), 50);
+}
+
+function closeRenameModal() {
+  document.getElementById('rename-modal').classList.add('hidden');
+  state.renameTarget = null;
+}
+
+async function confirmRename() {
+  const newPath = document.getElementById('rename-new').value.trim();
+  if (!newPath || !state.renameTarget || !state.selectedDevice) return;
+  try {
+    await api('POST', '/api/android/rename', {
+      serial: state.selectedDevice.serial,
+      oldPath: state.renameTarget,
+      newPath,
+    });
+    toast('Renamed successfully', 'success');
+    closeRenameModal();
+    browseAndroid(state.androidPath);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// DELETE MODAL
+// ============================================================
+function openDeleteModal(path) {
+  state.deleteTarget = path;
+  document.getElementById('delete-path-label').textContent = path;
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').classList.add('hidden');
+  state.deleteTarget = null;
+}
+
+async function confirmDelete() {
+  if (!state.deleteTarget || !state.selectedDevice) return;
+  try {
+    await api('POST', '/api/android/delete', {
+      serial: state.selectedDevice.serial,
+      path: state.deleteTarget,
+    });
+    toast('Deleted', 'success');
+    closeDeleteModal();
+    browseAndroid(state.androidPath);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// TRANSFERS
+// ============================================================
+async function startTransfer() {
+  const remoteDir = document.getElementById('remote-dir').value.trim();
+  const localDir = document.getElementById('local-dir').value.trim();
+  if (!state.selectedDevice) { toast('Select a device first', 'warn'); return; }
+  if (!remoteDir) { toast('Enter a source folder', 'warn'); return; }
+  if (!localDir) { toast('Enter or browse a destination folder', 'warn'); return; }
+
+  try {
+    const t = await api('POST', '/api/transfers', {
+      deviceSerial: state.selectedDevice.serial,
+      remoteDir,
+      localDir,
+    });
+    state.transfers[t.id] = t;
+    renderTransfers();
+    toast('Transfer started', 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function refreshTransfers() {
+  try {
+    const list = await api('GET', '/api/transfers');
+    (list || []).forEach(t => state.transfers[t.id] = t);
+    renderTransfers();
+  } catch (_) {}
+}
+
+async function transferAction(id, action) {
+  try {
+    const t = await api('POST', `/api/transfers/${id}/${action}`, {});
+    state.transfers[t.id] = t;
+    renderTransfers();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function clearFinished() {
+  try {
+    const res = await api('POST', '/api/transfers/clear', {});
+    // Remove finished cards from local state and DOM
+    Object.keys(state.transfers).forEach(id => {
+      const s = state.transfers[id].status;
+      if (s === 'completed' || s === 'failed' || s === 'cancelled') {
+        delete state.transfers[id];
+        const card = document.getElementById(`tc-${id}`);
+        if (card) card.remove();
+      }
+    });
+    renderTransfers();
+    if (res.removed > 0) toast(`Cleared ${res.removed} transfer${res.removed !== 1 ? 's' : ''}`, 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function removeTransfer(id) {
+  try {
+    await api('POST', `/api/transfers/${id}/remove`, {});
+    delete state.transfers[id];
+    const card = document.getElementById(`tc-${id}`);
+    if (card) {
+      card.style.opacity = '0';
+      card.style.transition = 'opacity 0.15s';
+      setTimeout(() => { card.remove(); renderTransfers(); }, 150);
+    }
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// Build the static skeleton for a new card. Dynamic parts are plain spans/divs
+// updated in-place by patchTransferCard() — this avoids resetting CSS transitions.
+function buildTransferCard(t) {
+  const div = document.createElement('div');
+  div.id = `tc-${t.id}`;
+  div.className = 'bg-gray-900 border border-gray-800 rounded-xl p-4 fade-in';
+  div.innerHTML = `
+    <div class="flex items-start justify-between gap-4 mb-3">
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-mono text-gray-400 truncate" title="${esc(t.remoteDir)}">${esc(t.remoteDir)}</div>
+        <div class="text-[10px] text-gray-600 font-mono truncate mt-0.5" title="${esc(t.localDir)}">→ ${esc(t.localDir)}</div>
+      </div>
+      <span id="tc-status-${t.id}" class="text-xs font-medium shrink-0 capitalize"></span>
+    </div>
+    <div id="tc-progress-${t.id}" class="hidden">
+      <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+        <span id="tc-files-${t.id}"></span>
+        <span id="tc-bytes-${t.id}"></span>
+        <span id="tc-pct-${t.id}"></span>
+      </div>
+      <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden mb-2">
+        <div id="tc-bar-${t.id}" class="h-full rounded-full" style="width:0%;transition:width 0.4s ease"></div>
+      </div>
+      <div id="tc-stats-${t.id}" class="flex gap-3 text-[10px] text-gray-600 mb-2"></div>
+    </div>
+    <p id="tc-error-${t.id}" class="hidden text-xs text-red-400 mb-2"></p>
+    <div id="tc-controls-${t.id}" class="flex gap-2"></div>`;
+  return div;
+}
+
+function patchTransferCard(t) {
+  const pct = t.totalFiles > 0 ? Math.round((t.doneFiles / t.totalFiles) * 100) : 0;
+
+  const statusColor = {
+    pending: 'text-gray-400', scanning: 'text-blue-400', running: 'text-green-400',
+    paused: 'text-yellow-400', completed: 'text-green-400', failed: 'text-red-400',
+    cancelled: 'text-gray-500',
+  }[t.status] || 'text-gray-400';
+
+  const barColor = {
+    running: 'bg-green-500', completed: 'bg-green-600',
+    failed: 'bg-red-500', paused: 'bg-yellow-500', cancelled: 'bg-gray-600',
+  }[t.status] || 'bg-blue-500';
+
+  // Status badge
+  const spinner = t.status === 'scanning'
+    ? `<svg class="w-3 h-3 spin text-blue-400 inline ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>` : '';
+  const statusEl = document.getElementById(`tc-status-${t.id}`);
+  if (statusEl) {
+    statusEl.className = `text-xs font-medium shrink-0 capitalize ${statusColor}`;
+    statusEl.innerHTML = t.status + spinner;
+  }
+
+  // Progress section — show once we leave pending
+  const progressEl = document.getElementById(`tc-progress-${t.id}`);
+  if (progressEl && t.status !== 'pending') {
+    progressEl.classList.remove('hidden');
+
+    const f = document.getElementById(`tc-files-${t.id}`);
+    if (f) f.textContent = `${t.doneFiles} / ${t.totalFiles} files`;
+
+    const b = document.getElementById(`tc-bytes-${t.id}`);
+    if (b) b.textContent = `${formatBytes(t.doneBytes)} / ${formatBytes(t.totalBytes)}`;
+
+    const p = document.getElementById(`tc-pct-${t.id}`);
+    if (p) p.textContent = `${pct}%`;
+
+    // Update bar width & colour without rebuilding the element (no flicker)
+    const bar = document.getElementById(`tc-bar-${t.id}`);
+    if (bar) {
+      bar.style.width = `${pct}%`;
+      bar.className = `h-full rounded-full ${barColor}`;
+      bar.style.transition = 'width 0.4s ease';
+    }
+
+    const stats = document.getElementById(`tc-stats-${t.id}`);
+    if (stats) {
+      const dl = t.doneFiles - t.skippedFiles - t.failedFiles;
+      stats.innerHTML = `<span class="text-green-600">${dl} downloaded</span>
+        <span class="text-blue-600">${t.skippedFiles} skipped</span>
+        ${t.failedFiles > 0 ? `<span class="text-red-500">${t.failedFiles} failed</span>` : ''}`;
+    }
+  }
+
+  // Error
+  const errEl = document.getElementById(`tc-error-${t.id}`);
+  if (errEl) {
+    if (t.error) { errEl.classList.remove('hidden'); errEl.textContent = t.error; }
+    else errEl.classList.add('hidden');
+  }
+
+  // Controls
+  const ctrl = document.getElementById(`tc-controls-${t.id}`);
+  if (ctrl) {
+    if (t.status === 'running' || t.status === 'scanning') {
+      ctrl.innerHTML = `
+        <button onclick="transferAction('${t.id}','pause')"
+          class="text-xs px-2 py-1 rounded bg-yellow-700 hover:bg-yellow-600 text-white transition">Pause</button>
+        <button onclick="transferAction('${t.id}','cancel')"
+          class="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 transition">Cancel</button>`;
+    } else if (t.status === 'paused' || t.status === 'failed') {
+      ctrl.innerHTML = `
+        <button onclick="transferAction('${t.id}','resume')"
+          class="text-xs px-2 py-1 rounded bg-green-700 hover:bg-green-600 text-white transition">Resume</button>
+        <button onclick="transferAction('${t.id}','cancel')"
+          class="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 transition">Cancel</button>`;
+    } else if (t.status === 'completed' || t.status === 'cancelled') {
+      ctrl.innerHTML = `
+        <button onclick="removeTransfer('${t.id}')"
+          class="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition">Remove</button>`;
+    } else {
+      ctrl.innerHTML = '';
+    }
+  }
+}
+
+function renderTransfers() {
+  const list = Object.values(state.transfers).sort((a,b) =>
+    new Date(b.createdAt) - new Date(a.createdAt));
+
+  const el = document.getElementById('transfer-list');
+  const none = document.getElementById('no-transfers');
+  const count = document.getElementById('transfer-count');
+
+  count.textContent = list.length ? `${list.length} transfer${list.length !== 1 ? 's' : ''}` : '';
+  none.style.display = list.length ? 'none' : '';
+  const hasFinished = list.some(t => t.status === 'completed' || t.status === 'failed' || t.status === 'cancelled');
+  document.getElementById('clear-btn').style.display = hasFinished ? '' : 'none';
+
+  // Remove cards whose transfers are gone from state
+  el.querySelectorAll(':scope > [id^="tc-"]').forEach(card => {
+    const id = card.id.slice(3); // strip leading "tc-"
+    if (!state.transfers[id]) card.remove();
+  });
+
+  // Create or patch each card, then ensure DOM order matches sort order
+  list.forEach((t, idx) => {
+    let card = document.getElementById(`tc-${t.id}`);
+    if (!card) {
+      card = buildTransferCard(t);
+      el.appendChild(card);
+    }
+    patchTransferCard(t);
+    // Keep list in sorted order without full rebuild
+    if (el.children[idx] !== card) {
+      el.insertBefore(card, el.children[idx] || null);
+    }
+  });
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function formatBytes(b) {
+  if (!b || b === 0) return '0 B';
+  const units = ['B','KB','MB','GB'];
+  let i = 0;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  return `${b.toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modals on ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeRenameModal();
+    closeDeleteModal();
+    closeLocalBrowser();
+  }
+});
+
+// ============================================================
+// BOOT
+// ============================================================
+connectWS();
+</script>
+</body>
+</html>
