@@ -2,8 +2,9 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,6 +17,15 @@ var staticFiles embed.FS
 var version = "dev"
 
 func main() {
+	logLevel := flag.String("log-level", "", "log level: debug, info, warn, error  (env: LOG_LEVEL)")
+	flag.Parse()
+
+	level := *logLevel
+	if level == "" {
+		level = os.Getenv("LOG_LEVEL")
+	}
+	initLogger(level)
+
 	port := "8765"
 	if p := os.Getenv("PORT"); p != "" {
 		port = p
@@ -129,8 +139,11 @@ func main() {
 	})
 
 	addr := fmt.Sprintf(":%s", port)
-	log.Printf("AndroidBackup %s — http://localhost%s", version, addr)
-	log.Fatal(http.ListenAndServe(addr, corsMiddleware(mux)))
+	slog.Info("AndroidBackup "+version, "url", "http://localhost"+addr, "state", stateFile)
+	if err := http.ListenAndServe(addr, loggingMiddleware(corsMiddleware(mux))); err != nil {
+		slog.Error("server stopped", "err", err)
+		os.Exit(1)
+	}
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

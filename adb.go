@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -112,6 +113,7 @@ func BrowseDir(serial, path string) ([]FileEntry, error) {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
+	slog.Debug("browse", "serial", serial, "path", path)
 
 	// Use ls -la --color=never for detailed listing
 	raw, err := adbRun(serial, "shell", "ls", "-la", "--color=never", path)
@@ -229,6 +231,7 @@ func RenamePath(serial, oldPath, newPath string) error {
 
 // PullFile runs adb pull for a single file.
 func PullFile(serial, remotePath, localPath string) error {
+	slog.Debug("adb pull", "serial", serial, "remote", remotePath)
 	_, err := exec.Command("adb", "-s", serial, "pull", remotePath, localPath).CombinedOutput()
 	return err
 }

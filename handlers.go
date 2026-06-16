@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -212,9 +213,11 @@ func handleConnectWifi(w http.ResponseWriter, r *http.Request) {
 	}
 	msg, err := ConnectWifi(body.Address)
 	if err != nil {
+		slog.Warn("wifi connect failed", "address", body.Address, "err", err)
 		errResp(w, 500, err.Error())
 		return
 	}
+	slog.Info("wifi connected", "address", body.Address, "result", msg)
 	writeJSON(w, 200, map[string]string{"message": msg})
 }
 
@@ -231,6 +234,7 @@ func handleDisconnectWifi(w http.ResponseWriter, r *http.Request) {
 		errResp(w, 500, err.Error())
 		return
 	}
+	slog.Info("wifi disconnected", "address", body.Address, "result", msg)
 	writeJSON(w, 200, map[string]string{"message": msg})
 }
 
@@ -268,9 +272,11 @@ func handleAndroidDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := DeletePath(body.Serial, body.Path); err != nil {
+		slog.Warn("delete failed", "path", body.Path, "err", err)
 		errResp(w, 500, err.Error())
 		return
 	}
+	slog.Info("deleted", "serial", body.Serial, "path", body.Path)
 	writeJSON(w, 200, map[string]string{"status": "deleted"})
 }
 
@@ -285,9 +291,11 @@ func handleAndroidRename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := RenamePath(body.Serial, body.OldPath, body.NewPath); err != nil {
+		slog.Warn("rename failed", "from", body.OldPath, "to", body.NewPath, "err", err)
 		errResp(w, 500, err.Error())
 		return
 	}
+	slog.Info("renamed", "serial", body.Serial, "from", body.OldPath, "to", body.NewPath)
 	writeJSON(w, 200, map[string]string{"status": "renamed"})
 }
 

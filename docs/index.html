@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Android Backup — WiFi &amp; USB file transfer for Android</title>
+  <meta name="description" content="Copy photos, videos, and files from any Android device to your PC. Browse, transfer, pause, resume — all from a browser." />
+  <meta property="og:title" content="Android Backup" />
+  <meta property="og:description" content="WiFi &amp; USB file transfer for Android, powered by ADB." />
+  <meta property="og:image" content="screen-shot.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* gradient hero background */
+    .hero-bg {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    }
+    /* code block chrome */
+    pre { scrollbar-width: thin; }
+    /* smooth pill border animation */
+    .pill { transition: box-shadow .2s; }
+    .pill:hover { box-shadow: 0 0 0 3px #6366f140; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased">
+
+<!-- ── NAV ────────────────────────────────────────────────────────────────── -->
+<header class="sticky top-0 z-50 border-b border-white/5 backdrop-blur bg-slate-950/80">
+  <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+    <span class="font-bold text-lg tracking-tight flex items-center gap-2">
+      <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+      Android Backup
+    </span>
+    <nav class="flex items-center gap-6 text-sm text-slate-400">
+      <a href="#features" class="hover:text-white transition-colors">Features</a>
+      <a href="#quickstart" class="hover:text-white transition-colors">Quick start</a>
+      <a href="#download" class="hover:text-white transition-colors">Download</a>
+      <a href="https://github.com/bkrajendra/android_backup" target="_blank" rel="noopener"
+         class="hover:text-white transition-colors flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<!-- ── HERO ───────────────────────────────────────────────────────────────── -->
+<section class="hero-bg pt-24 pb-16 text-center px-4">
+  <div class="max-w-3xl mx-auto">
+    <span class="inline-block mb-4 px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+      Free &amp; Open Source
+    </span>
+    <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-5 bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent">
+      Back up your Android, your way
+    </h1>
+    <p class="text-xl text-slate-400 mb-8 max-w-2xl mx-auto">
+      Browse, transfer, and manage files on any Android device from your browser —
+      over USB or Wi-Fi, with pause &amp; resume, conflict detection, and a built-in file viewer.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <a href="#download"
+         class="pill px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold transition-colors text-white">
+        Download for free
+      </a>
+      <a href="https://github.com/bkrajendra/android_backup" target="_blank" rel="noopener"
+         class="pill px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 font-semibold transition-colors border border-white/10">
+        View on GitHub
+      </a>
+    </div>
+  </div>
+
+  <!-- screenshot -->
+  <div class="mt-14 max-w-5xl mx-auto px-4">
+    <div class="rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-indigo-900/40">
+      <img src="screen-shot.png" alt="Android Backup interface screenshot"
+           class="w-full h-auto block" />
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ───────────────────────────────────────────────────────── -->
+<section class="py-16 px-4 border-t border-white/5">
+  <div class="max-w-4xl mx-auto text-center">
+    <h2 class="text-sm font-semibold text-indigo-400 uppercase tracking-widest mb-3">How it works</h2>
+    <p class="text-slate-400 text-lg">
+      A tiny Go binary starts a local web server on port <code class="text-indigo-300 bg-slate-800 px-1.5 py-0.5 rounded text-sm">8765</code>.
+      Open your browser, pick a device, browse to a folder, and click <strong class="text-white">Start Transfer</strong>.
+      Everything runs entirely on your machine — no cloud, no account, no data leaves your network.
+    </p>
+    <div class="mt-10 grid grid-cols-3 gap-0 max-w-2xl mx-auto text-sm text-slate-400">
+      <div class="flex flex-col items-center gap-2 px-4">
+        <div class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-lg">1</div>
+        <span>Run the binary</span>
+      </div>
+      <div class="flex items-center justify-center text-slate-600 text-2xl font-thin">→</div>
+      <div class="flex flex-col items-center gap-2 px-4 -ml-8">
+        <div class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-lg">2</div>
+        <span>Open browser</span>
+      </div>
+    </div>
+    <div class="mt-4 grid grid-cols-3 gap-0 max-w-2xl mx-auto text-sm text-slate-400">
+      <div class="flex flex-col items-center gap-2 px-4">
+        <div class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-lg">3</div>
+        <span>Pick device &amp; folder</span>
+      </div>
+      <div class="flex items-center justify-center text-slate-600 text-2xl font-thin">→</div>
+      <div class="flex flex-col items-center gap-2 px-4 -ml-8">
+        <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-lg">✓</div>
+        <span>Files copied!</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ───────────────────────────────────────────────────────────── -->
+<section id="features" class="py-20 px-4 bg-slate-900/50 border-t border-white/5">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14">
+      <h2 class="text-3xl font-bold text-white">Everything you need</h2>
+      <p class="mt-2 text-slate-400">No installation wizard. No cloud. Just ADB and a browser.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- feature cards -->
+      <div class="bg-slate-800/60 border border-white/8 rounded-2xl p-6">
+        <div class="w-10 h-10 mb-4 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-1">USB &amp; Wi-Fi ADB</h3>
+        <p class="text-sm text-slate-400">Connect via cable or wirelessly. Pair over USB once, then go cord-free. Multi-device support — handle several phones at once.</p>
+      </div>
+
+      <div class="bg-slate-800/60 border border-white/8 rounded-2xl p-6">
+        <div class="w-10 h-10 mb-4 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-1">Pause &amp; Resume</h3>
+        <p class="text-sm text-slate-400">Stop mid-transfer and pick up exactly where you left off. Files already at their full size are skipped automatically.</p>
+      </div>
+
+      <div class="bg-slate-800/60 border border-white/8 rounded-2xl p-6">
+        <div class="w-10 h-10 mb-4 rounded-xl bg-violet-500/20 text-violet-400 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-1">Android file browser</h3>
+        <p class="text-sm text-slate-400">Navigate the full Android filesystem. Rename, delete, or move files and folders directly from the browser.</p>
+      </div>
+
+      <div class="bg-slate-800/60 border border-white/8 rounded-2xl p-6">
+        <div class="w-10 h-10 mb-4 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-1">Built-in file viewer</h3>
+        <p class="text-sm text-slate-400">Preview images, videos (with seeking), audio, PDFs, and text files without leaving the app. Files are cached locally.</p>
+      </div>
+
+      <div class="bg-slate-800/60 border border-white/8 rounded-2xl p-6">
+        <div class="w-10 h-10 mb-4 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-1">Real-time progress</h3>
+        <p class="text-sm text-slate-400">Live transfer queue with per-file logs, done/skipped/failed counts, and a filterable file log panel via WebSocket.</p>
+      </div>
+
+      <div class="bg-slate-800/60 border border-white/8 rounded-2xl p-6">
+        <div class="w-10 h-10 mb-4 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-1">Private by design</h3>
+        <p class="text-sm text-slate-400">Runs entirely on your local machine on port 8765. No accounts, no telemetry, no cloud upload — your files stay yours.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── QUICK START ─────────────────────────────────────────────────────────── -->
+<section id="quickstart" class="py-20 px-4 border-t border-white/5">
+  <div class="max-w-3xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-white">Quick start</h2>
+      <p class="mt-2 text-slate-400">Up and running in under two minutes.</p>
+    </div>
+
+    <!-- step 1 -->
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-bold flex items-center justify-center shrink-0">1</span>
+        <h3 class="font-semibold text-white">Install prerequisites</h3>
+      </div>
+      <p class="text-slate-400 text-sm ml-10 mb-2">
+        You need <a href="https://developer.android.com/tools/releases/platform-tools" class="text-indigo-400 hover:underline" target="_blank" rel="noopener">ADB (Platform Tools)</a> in your <code class="text-xs bg-slate-800 px-1.5 py-0.5 rounded">PATH</code>
+        and USB Debugging enabled on your Android device
+        (<strong class="text-white">Settings → Developer options → USB Debugging</strong>).
+      </p>
+    </div>
+
+    <!-- step 2 -->
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-bold flex items-center justify-center shrink-0">2</span>
+        <h3 class="font-semibold text-white">Download &amp; run</h3>
+      </div>
+      <div class="ml-10 space-y-2">
+        <!-- windows -->
+        <div class="rounded-xl bg-slate-900 border border-white/8 overflow-hidden">
+          <div class="px-4 py-2 bg-slate-800/60 border-b border-white/8 text-xs text-slate-400 font-mono flex items-center gap-2">
+            <span class="text-blue-400">⊞</span> Windows (PowerShell)
+          </div>
+          <pre class="px-4 py-3 text-sm text-emerald-300 font-mono overflow-x-auto"><code># Download the latest release
+Invoke-WebRequest -Uri https://github.com/bkrajendra/android_backup/releases/latest/download/androidbackup-windows-amd64.exe -OutFile androidbackup.exe
+
+# Run it
+.\androidbackup.exe</code></pre>
+        </div>
+        <!-- linux/mac -->
+        <div class="rounded-xl bg-slate-900 border border-white/8 overflow-hidden">
+          <div class="px-4 py-2 bg-slate-800/60 border-b border-white/8 text-xs text-slate-400 font-mono flex items-center gap-2">
+            <span class="text-slate-300">$</span> Linux / macOS (bash)
+          </div>
+          <pre class="px-4 py-3 text-sm text-emerald-300 font-mono overflow-x-auto"><code># Linux x64
+curl -L https://github.com/bkrajendra/android_backup/releases/latest/download/androidbackup-linux-amd64 -o androidbackup
+chmod +x androidbackup && ./androidbackup</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 3 -->
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-bold flex items-center justify-center shrink-0">3</span>
+        <h3 class="font-semibold text-white">Open your browser</h3>
+      </div>
+      <p class="text-slate-400 text-sm ml-10">
+        Navigate to
+        <a href="http://localhost:8765" class="text-indigo-400 font-mono hover:underline">http://localhost:8765</a>.
+        Your connected Android devices appear immediately — select one, browse to a folder, and click <strong class="text-white">Start Transfer</strong>.
+      </p>
+    </div>
+
+    <!-- wi-fi tip -->
+    <div class="ml-0 mt-6 rounded-xl bg-indigo-500/10 border border-indigo-500/25 p-4 text-sm text-indigo-200">
+      <strong class="text-indigo-300">Wi-Fi tip:</strong>
+      Connect via USB first and run <code class="bg-indigo-900/50 px-1.5 py-0.5 rounded text-xs">adb tcpip 5555</code>,
+      then unplug the cable. In the app, type your phone's IP address in the <em>Connect</em> field and click <strong>Connect</strong>.
+    </div>
+  </div>
+</section>
+
+<!-- ── DOWNLOAD ────────────────────────────────────────────────────────────── -->
+<section id="download" class="py-20 px-4 bg-slate-900/50 border-t border-white/5">
+  <div class="max-w-4xl mx-auto text-center">
+    <h2 class="text-3xl font-bold text-white mb-2">Download</h2>
+    <p class="text-slate-400 mb-10">Single binary — no installer, no dependencies beyond ADB.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
+
+      <!-- Windows -->
+      <a href="https://github.com/bkrajendra/android_backup/releases/latest/download/androidbackup-windows-amd64.exe"
+         class="pill group flex items-center gap-4 p-4 bg-slate-800/70 border border-white/8 rounded-2xl hover:border-indigo-500/50 transition-colors">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-blue-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-white text-sm group-hover:text-indigo-300 transition-colors">Windows</div>
+          <div class="text-xs text-slate-400">x64 · .exe</div>
+        </div>
+        <svg class="ml-auto w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+      </a>
+
+      <!-- Linux x64 -->
+      <a href="https://github.com/bkrajendra/android_backup/releases/latest/download/androidbackup-linux-amd64"
+         class="pill group flex items-center gap-4 p-4 bg-slate-800/70 border border-white/8 rounded-2xl hover:border-indigo-500/50 transition-colors">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-orange-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12.504 0c-.155 0-.315.008-.48.021C7.309.28 4.065 4.648 4.065 9.367c0 .37.017.735.054 1.094C4.72 14.665 7.63 18.01 11.5 18.44V19h1v-1h.004c3.87-.43 6.78-3.775 7.381-7.979.037-.36.054-.724.054-1.094 0-4.718-3.244-9.086-7.436-9.927zm-1.504 2c.099 0 .197.004.295.012a7.75 7.75 0 011.705.32c-.014.028-.027.056-.04.085l-1.96-1.417zm3 0l-1.96 1.417a5.96 5.96 0 00-.04-.085 7.75 7.75 0 011.705-.32c.098-.008.196-.012.295-.012zM12 4c2.485 0 4.5 2.015 4.5 4.5S14.485 13 12 13s-4.5-2.015-4.5-4.5S9.515 4 12 4zm0 1a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm0 5.5a2 2 0 110-4 2 2 0 010 4z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-white text-sm group-hover:text-indigo-300 transition-colors">Linux</div>
+          <div class="text-xs text-slate-400">x64 · binary</div>
+        </div>
+        <svg class="ml-auto w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+      </a>
+
+      <!-- Linux ARM64 -->
+      <a href="https://github.com/bkrajendra/android_backup/releases/latest/download/androidbackup-linux-arm64"
+         class="pill group flex items-center gap-4 p-4 bg-slate-800/70 border border-white/8 rounded-2xl hover:border-indigo-500/50 transition-colors">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-orange-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12.504 0c-.155 0-.315.008-.48.021C7.309.28 4.065 4.648 4.065 9.367c0 .37.017.735.054 1.094C4.72 14.665 7.63 18.01 11.5 18.44V19h1v-1h.004c3.87-.43 6.78-3.775 7.381-7.979.037-.36.054-.724.054-1.094 0-4.718-3.244-9.086-7.436-9.927zm-1.504 2c.099 0 .197.004.295.012a7.75 7.75 0 011.705.32c-.014.028-.027.056-.04.085l-1.96-1.417zm3 0l-1.96 1.417a5.96 5.96 0 00-.04-.085 7.75 7.75 0 011.705-.32c.098-.008.196-.012.295-.012zM12 4c2.485 0 4.5 2.015 4.5 4.5S14.485 13 12 13s-4.5-2.015-4.5-4.5S9.515 4 12 4zm0 1a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm0 5.5a2 2 0 110-4 2 2 0 010 4z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-white text-sm group-hover:text-indigo-300 transition-colors">Linux</div>
+          <div class="text-xs text-slate-400">ARM64 (Pi, etc.)</div>
+        </div>
+        <svg class="ml-auto w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+      </a>
+
+      <!-- macOS x64 -->
+      <a href="https://github.com/bkrajendra/android_backup/releases/latest/download/androidbackup-darwin-amd64"
+         class="pill group flex items-center gap-4 p-4 bg-slate-800/70 border border-white/8 rounded-2xl hover:border-indigo-500/50 transition-colors">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-slate-600/40 flex items-center justify-center">
+          <svg class="w-5 h-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-white text-sm group-hover:text-indigo-300 transition-colors">macOS</div>
+          <div class="text-xs text-slate-400">Intel x64</div>
+        </div>
+        <svg class="ml-auto w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+      </a>
+
+      <!-- macOS ARM64 -->
+      <a href="https://github.com/bkrajendra/android_backup/releases/latest/download/androidbackup-darwin-arm64"
+         class="pill group flex items-center gap-4 p-4 bg-slate-800/70 border border-white/8 rounded-2xl hover:border-indigo-500/50 transition-colors">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-slate-600/40 flex items-center justify-center">
+          <svg class="w-5 h-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-white text-sm group-hover:text-indigo-300 transition-colors">macOS</div>
+          <div class="text-xs text-slate-400">Apple Silicon</div>
+        </div>
+        <svg class="ml-auto w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+      </a>
+
+      <!-- All releases -->
+      <a href="https://github.com/bkrajendra/android_backup/releases"
+         class="pill group flex items-center gap-4 p-4 bg-transparent border border-dashed border-white/15 rounded-2xl hover:border-indigo-500/50 transition-colors">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-white/5 flex items-center justify-center">
+          <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-white text-sm group-hover:text-indigo-300 transition-colors">All releases</div>
+          <div class="text-xs text-slate-400">GitHub releases page</div>
+        </div>
+        <svg class="ml-auto w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+      </a>
+
+    </div>
+
+    <p class="mt-8 text-xs text-slate-500">
+      Binaries are built automatically from source via GitHub Actions on every push.
+      <a href="https://github.com/bkrajendra/android_backup/actions" class="text-indigo-400 hover:underline" target="_blank" rel="noopener">View build history →</a>
+    </p>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────────────────────────── -->
+<footer class="border-t border-white/5 py-10 px-4 text-center text-sm text-slate-500">
+  <p>
+    Built with Go &amp; ADB ·
+    <a href="https://github.com/bkrajendra/android_backup" class="text-indigo-400 hover:underline" target="_blank" rel="noopener">Open source on GitHub</a>
+    · MIT License
+  </p>
+</footer>
+
+</body>
+</html>

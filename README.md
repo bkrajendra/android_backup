@@ -63,6 +63,27 @@ To use a different port:
 $env:PORT = "9000"; .\androidbackup.exe
 ```
 
+### Log levels
+
+By default the app logs at **INFO** level (startup, requests, transfer lifecycle). Set to `debug` to see per-file ADB operations, or `warn`/`error` for quiet operation.
+
+```powershell
+# via environment variable
+$env:LOG_LEVEL = "debug"; .\androidbackup.exe
+
+# via command-line flag
+.\androidbackup.exe --log-level=debug
+```
+
+| Level   | What you see |
+|---------|--------------|
+| `debug` | Every ADB browse/pull call, file skips, dir scans |
+| `info`  | HTTP requests, transfer lifecycle, WiFi connect (default) |
+| `warn`  | Failed files, failed connections |
+| `error` | Server errors, scan failures |
+
+Set `NO_COLOR=1` to disable colored output (e.g. when piping to a file).
+
 ---
 
 ## Connect your Android device

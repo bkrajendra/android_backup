@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -139,6 +140,9 @@ func (tm *TransferManager) loadState() {
 		t.cancelCh = make(chan struct{})
 		tm.transfers[t.ID] = t
 	}
+	if len(transfers) > 0 {
+		slog.Info("state loaded", "transfers", len(transfers))
+	}
 }
 
 func (tm *TransferManager) saveState() {
@@ -172,6 +176,7 @@ func (tm *TransferManager) Create(deviceSerial, remoteDir, localDir string) *Tra
 	tm.transfers[t.ID] = t
 	tm.mu.Unlock()
 	tm.saveState()
+	slog.Info("transfer created", "id", t.ID, "device", deviceSerial, "remote", remoteDir, "local", localDir)
 	return t
 }
 
@@ -267,6 +272,7 @@ func (tm *TransferManager) Start(id string) error {
 	t.UpdatedAt = time.Now()
 	t.mu.Unlock()
 
+	slog.Info("transfer starting", "id", id)
 	go tm.run(t)
 	return nil
 }
@@ -284,6 +290,7 @@ func (tm *TransferManager) Pause(id string) error {
 	t.Status = StatusPaused
 	t.UpdatedAt = time.Now()
 	close(t.pauseCh)
+	slog.Info("transfer paused", "id", id)
 	return nil
 }
 
@@ -303,6 +310,7 @@ func (tm *TransferManager) Cancel(id string) error {
 	if prevStatus == StatusRunning || prevStatus == StatusScanning {
 		close(t.cancelCh)
 	}
+	slog.Info("transfer cancelled", "id", id)
 	return nil
 }
 
@@ -361,7 +369,9 @@ func (tm *TransferManager) run(t *Transfer) {
 
 	// Scan phase: build file list if we don't have one yet
 	if len(t.Files) == 0 {
+		slog.Debug("scan started", "id", t.ID, "remote", t.RemoteDir)
 		if err := tm.scan(t); err != nil {
+			slog.Error("scan failed", "id", t.ID, "err", err)
 			t.mu.Lock()
 			t.Status = StatusFailed
 			t.Error = err.Error()
@@ -371,6 +381,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			return
 		}
 		if t.TotalFiles == 0 {
+			slog.Warn("scan found no files", "id", t.ID, "remote", t.RemoteDir)
 			t.mu.Lock()
 			t.Status = StatusFailed
 			t.Error = fmt.Sprintf("no files found in %s — check the path and device connection", t.RemoteDir)
@@ -379,6 +390,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			tm.broadcast(t.summary())
 			return
 		}
+		slog.Info("scan complete", "id", t.ID, "files", t.TotalFiles)
 	}
 
 	t.mu.Lock()
@@ -393,6 +405,7 @@ func (tm *TransferManager) run(t *Transfer) {
 	t.UpdatedAt = time.Now()
 	t.mu.Unlock()
 	tm.broadcast(t.summary())
+	slog.Info("download started", "id", t.ID, "files", t.TotalFiles)
 
 	// Download phase
 	for _, f := range t.Files {
@@ -429,6 +442,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			// File exists locally
 			if localInfo.Size() == f.Size && f.Size > 0 {
 				// Same size — skip
+				slog.Debug("skip", "file", filepath.Base(f.RemotePath))
 				f.Status = FileSkipped
 				t.mu.Lock()
 				t.SkippedFiles++
@@ -454,7 +468,9 @@ func (tm *TransferManager) run(t *Transfer) {
 			continue
 		}
 
+		slog.Debug("pull", "file", filepath.Base(f.RemotePath))
 		if err := PullFile(t.DeviceSerial, f.RemotePath, f.LocalPath); err != nil {
+			slog.Warn("file failed", "file", f.RemotePath, "err", err)
 			f.Status = FileFailed
 			f.Error = err.Error()
 			t.mu.Lock()
@@ -477,8 +493,10 @@ func (tm *TransferManager) run(t *Transfer) {
 	if t.FailedFiles > 0 {
 		t.Status = StatusFailed
 		t.Error = fmt.Sprintf("%d file(s) failed to download", t.FailedFiles)
+		slog.Warn("transfer finished with errors", "id", t.ID, "done", t.DoneFiles, "skipped", t.SkippedFiles, "failed", t.FailedFiles)
 	} else {
 		t.Status = StatusCompleted
+		slog.Info("transfer completed", "id", t.ID, "done", t.DoneFiles, "skipped", t.SkippedFiles)
 	}
 	t.UpdatedAt = time.Now()
 	t.mu.Unlock()
@@ -497,6 +515,7 @@ func (tm *TransferManager) scanDir(t *Transfer, remoteDir, localDir string) erro
 	default:
 	}
 
+	slog.Debug("scanning", "dir", remoteDir)
 	entries, err := BrowseDir(t.DeviceSerial, remoteDir)
 	if err != nil {
 		return err
