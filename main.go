@@ -12,6 +12,9 @@ import (
 //go:embed index.html
 var staticFiles embed.FS
 
+// version is set at build time via -ldflags "-X main.version=vX.Y.Z"
+var version = "dev"
+
 func main() {
 	port := "8765"
 	if p := os.Getenv("PORT"); p != "" {
@@ -23,10 +26,10 @@ func main() {
 
 	stateFile := filepath.Join(os.TempDir(), "androidbackup_state.json")
 
-	tm := NewTransferManager(stateFile, func(t Transfer) {
+	tm := NewTransferManager(stateFile, func(s TransferSummary) {
 		hub.send(map[string]interface{}{
 			"type":     "transfer_update",
-			"transfer": t,
+			"transfer": s,
 		})
 	})
 
@@ -71,6 +74,13 @@ func main() {
 	})
 
 	// Android filesystem API
+	mux.HandleFunc("/api/android/view", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			errResp(w, 405, "method not allowed")
+			return
+		}
+		handleAndroidView(w, r)
+	})
 	mux.HandleFunc("/api/android/browse", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			errResp(w, 405, "method not allowed")
@@ -101,13 +111,25 @@ func main() {
 		}
 		handleLocalBrowse(w, r)
 	})
+	mux.HandleFunc("/api/local/mkdir", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			errResp(w, 405, "method not allowed")
+			return
+		}
+		handleLocalMkdir(w, r)
+	})
 
 	// Transfer API
 	registerTransfers := makeTransferHandlers(tm)
 	registerTransfers(mux)
 
+	// Version endpoint
+	mux.HandleFunc("/api/version", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]string{"version": version})
+	})
+
 	addr := fmt.Sprintf(":%s", port)
-	log.Printf("AndroidBackup server running at http://localhost%s", addr)
+	log.Printf("AndroidBackup %s — http://localhost%s", version, addr)
 	log.Fatal(http.ListenAndServe(addr, corsMiddleware(mux)))
 }
 

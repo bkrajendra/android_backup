@@ -61,14 +61,57 @@ type Transfer struct {
 	cancelCh chan struct{}  `json:"-"`
 }
 
+// TransferSummary is broadcast over WebSocket and returned by the list API.
+// It omits the (potentially huge) Files slice so payloads stay small.
+type TransferSummary struct {
+	ID           string         `json:"id"`
+	DeviceSerial string         `json:"deviceSerial"`
+	RemoteDir    string         `json:"remoteDir"`
+	LocalDir     string         `json:"localDir"`
+	Status       TransferStatus `json:"status"`
+	TotalFiles   int            `json:"totalFiles"`
+	DoneFiles    int            `json:"doneFiles"`
+	SkippedFiles int            `json:"skippedFiles"`
+	FailedFiles  int            `json:"failedFiles"`
+	TotalBytes   int64          `json:"totalBytes"`
+	DoneBytes    int64          `json:"doneBytes"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	Error        string         `json:"error,omitempty"`
+}
+
+func (t *Transfer) summary() TransferSummary {
+	return TransferSummary{
+		ID:           t.ID,
+		DeviceSerial: t.DeviceSerial,
+		RemoteDir:    t.RemoteDir,
+		LocalDir:     t.LocalDir,
+		Status:       t.Status,
+		TotalFiles:   t.TotalFiles,
+		DoneFiles:    t.DoneFiles,
+		SkippedFiles: t.SkippedFiles,
+		FailedFiles:  t.FailedFiles,
+		TotalBytes:   t.TotalBytes,
+		DoneBytes:    t.DoneBytes,
+		CreatedAt:    t.CreatedAt,
+		UpdatedAt:    t.UpdatedAt,
+		Error:        t.Error,
+	}
+}
+
+type FileListResult struct {
+	Total int             `json:"total"`
+	Items []*TransferFile `json:"items"`
+}
+
 type TransferManager struct {
 	mu        sync.RWMutex
 	transfers map[string]*Transfer
 	stateFile string
-	broadcast func(Transfer)
+	broadcast func(TransferSummary)
 }
 
-func NewTransferManager(stateFile string, broadcast func(Transfer)) *TransferManager {
+func NewTransferManager(stateFile string, broadcast func(TransferSummary)) *TransferManager {
 	tm := &TransferManager{
 		transfers: make(map[string]*Transfer),
 		stateFile: stateFile,
@@ -139,14 +182,68 @@ func (tm *TransferManager) Get(id string) (*Transfer, bool) {
 	return t, ok
 }
 
-func (tm *TransferManager) List() []*Transfer {
+func (tm *TransferManager) ListSummaries() []TransferSummary {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
-	var list []*Transfer
+	var list []TransferSummary
 	for _, t := range tm.transfers {
-		list = append(list, t)
+		t.mu.Lock()
+		s := t.summary()
+		t.mu.Unlock()
+		list = append(list, s)
 	}
 	return list
+}
+
+// GetFiles returns paginated files for a transfer, optionally filtered by status.
+// filter: "all", "failed", "recent" (default — newest-first, capped at limit).
+func (tm *TransferManager) GetFiles(id, filter string, offset, limit int) (*FileListResult, error) {
+	t, ok := tm.Get(id)
+	if !ok {
+		return nil, fmt.Errorf("transfer not found")
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if limit <= 0 {
+		limit = 100
+	}
+
+	switch filter {
+	case "failed":
+		var out []*TransferFile
+		for _, f := range t.Files {
+			if f.Status == FileFailed {
+				out = append(out, f)
+			}
+		}
+		return paginate(out, offset, limit), nil
+
+	case "recent", "":
+		// Return files in reverse order so the most recently touched are first.
+		// This gives a live view of what's happening right now.
+		n := len(t.Files)
+		reversed := make([]*TransferFile, n)
+		for i, f := range t.Files {
+			reversed[n-1-i] = f
+		}
+		return paginate(reversed, offset, limit), nil
+
+	default: // "all"
+		return paginate(t.Files, offset, limit), nil
+	}
+}
+
+func paginate(files []*TransferFile, offset, limit int) *FileListResult {
+	total := len(files)
+	if offset >= total {
+		return &FileListResult{Total: total, Items: []*TransferFile{}}
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	return &FileListResult{Total: total, Items: files[offset:end]}
 }
 
 func (tm *TransferManager) Start(id string) error {
@@ -258,7 +355,7 @@ func (tm *TransferManager) run(t *Transfer) {
 		t.Error = err.Error()
 		t.UpdatedAt = time.Now()
 		t.mu.Unlock()
-		tm.broadcast(*t)
+		tm.broadcast(t.summary())
 		return
 	}
 
@@ -270,7 +367,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			t.Error = err.Error()
 			t.UpdatedAt = time.Now()
 			t.mu.Unlock()
-			tm.broadcast(*t)
+			tm.broadcast(t.summary())
 			return
 		}
 		if t.TotalFiles == 0 {
@@ -279,7 +376,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			t.Error = fmt.Sprintf("no files found in %s — check the path and device connection", t.RemoteDir)
 			t.UpdatedAt = time.Now()
 			t.mu.Unlock()
-			tm.broadcast(*t)
+			tm.broadcast(t.summary())
 			return
 		}
 	}
@@ -295,7 +392,7 @@ func (tm *TransferManager) run(t *Transfer) {
 	t.Status = StatusRunning
 	t.UpdatedAt = time.Now()
 	t.mu.Unlock()
-	tm.broadcast(*t)
+	tm.broadcast(t.summary())
 
 	// Download phase
 	for _, f := range t.Files {
@@ -306,7 +403,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			t.Status = StatusCancelled
 			t.UpdatedAt = time.Now()
 			t.mu.Unlock()
-			tm.broadcast(*t)
+			tm.broadcast(t.summary())
 			return
 		default:
 		}
@@ -324,7 +421,7 @@ func (tm *TransferManager) run(t *Transfer) {
 		}
 
 		f.Status = FileRunning
-		tm.broadcast(*t)
+		tm.broadcast(t.summary())
 
 		// Check if local file already exists (skip / resume logic)
 		localInfo, err := os.Stat(f.LocalPath)
@@ -339,7 +436,7 @@ func (tm *TransferManager) run(t *Transfer) {
 				t.DoneBytes += f.Size
 				t.UpdatedAt = time.Now()
 				t.mu.Unlock()
-				tm.broadcast(*t)
+				tm.broadcast(t.summary())
 				tm.saveState()
 				continue
 			}
@@ -353,7 +450,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			t.FailedFiles++
 			t.UpdatedAt = time.Now()
 			t.mu.Unlock()
-			tm.broadcast(*t)
+			tm.broadcast(t.summary())
 			continue
 		}
 
@@ -372,7 +469,7 @@ func (tm *TransferManager) run(t *Transfer) {
 			t.UpdatedAt = time.Now()
 			t.mu.Unlock()
 		}
-		tm.broadcast(*t)
+		tm.broadcast(t.summary())
 		tm.saveState()
 	}
 
@@ -385,7 +482,7 @@ func (tm *TransferManager) run(t *Transfer) {
 	}
 	t.UpdatedAt = time.Now()
 	t.mu.Unlock()
-	tm.broadcast(*t)
+	tm.broadcast(t.summary())
 }
 
 // scan recursively lists all files under remoteDir and populates t.Files.
@@ -425,7 +522,7 @@ func (tm *TransferManager) scanDir(t *Transfer, remoteDir, localDir string) erro
 			t.TotalBytes += entry.Size
 			t.UpdatedAt = time.Now()
 			t.mu.Unlock()
-			tm.broadcast(*t)
+			tm.broadcast(t.summary())
 		}
 	}
 	return nil

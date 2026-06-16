@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -225,8 +227,66 @@ func RenamePath(serial, oldPath, newPath string) error {
 	return err
 }
 
-// PullFile runs adb pull for a single file. Returns bytes transferred.
+// PullFile runs adb pull for a single file.
 func PullFile(serial, remotePath, localPath string) error {
 	_, err := exec.Command("adb", "-s", serial, "pull", remotePath, localPath).CombinedOutput()
 	return err
+}
+
+// ViewCachePath returns the local cache path for a remote file preview.
+func ViewCachePath(serial, remotePath string) string {
+	cacheDir := filepath.Join(os.TempDir(), "androidbackup_view")
+	_ = os.MkdirAll(cacheDir, 0755)
+	base := filepath.Base(remotePath)
+	return filepath.Join(cacheDir, fmt.Sprintf("%08x_%s", fnvHash(serial+":"+remotePath), sanitizeFilename(base)))
+}
+
+func fnvHash(s string) uint32 {
+	h := uint32(2166136261)
+	for i := 0; i < len(s); i++ {
+		h ^= uint32(s[i])
+		h *= 16777619
+	}
+	return h
+}
+
+func sanitizeFilename(name string) string {
+	var b strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '-' || r == '_' {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('_')
+		}
+	}
+	s := b.String()
+	if len(s) > 80 {
+		s = s[len(s)-80:]
+	}
+	return s
+}
+
+// ExtContentType maps a lowercase file extension (without dot) to a MIME type.
+func ExtContentType(ext string) string {
+	m := map[string]string{
+		"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+		"gif": "image/gif", "webp": "image/webp", "bmp": "image/bmp",
+		"heic": "image/heic", "heif": "image/heif",
+		"mp4": "video/mp4", "m4v": "video/mp4", "mov": "video/quicktime",
+		"mkv": "video/x-matroska", "avi": "video/x-msvideo", "3gp": "video/3gpp",
+		"webm": "video/webm",
+		"mp3": "audio/mpeg", "aac": "audio/aac", "m4a": "audio/mp4",
+		"ogg": "audio/ogg", "flac": "audio/flac", "wav": "audio/wav",
+		"pdf":  "application/pdf",
+		"txt":  "text/plain; charset=utf-8",
+		"log":  "text/plain; charset=utf-8",
+		"xml":  "text/xml; charset=utf-8",
+		"json": "application/json; charset=utf-8",
+		"csv":  "text/csv; charset=utf-8",
+		"md":   "text/plain; charset=utf-8",
+	}
+	if ct, ok := m[ext]; ok {
+		return ct
+	}
+	return "application/octet-stream"
 }

@@ -1,0 +1,138 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # needed to create tags and GitHub releases
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout with full tag history ───────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # required to see all existing tags
+
+      # ── 2. Compute the next minor version ───────────────────────────
+      - name: Compute next version
+        id: version
+        run: |
+          git fetch --tags --force
+
+          # Find the latest semver tag (vMAJOR.MINOR.PATCH)
+          LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+
+          if [ -z "$LATEST" ]; then
+            # No tags yet — start at v0.1.0
+            NEW_TAG="v0.1.0"
+          else
+            MAJOR=$(echo "$LATEST" | cut -d. -f1 | tr -d 'v')
+            MINOR=$(echo "$LATEST" | cut -d. -f2)
+            NEW_MINOR=$((MINOR + 1))
+            NEW_TAG="v${MAJOR}.${NEW_MINOR}.0"
+          fi
+
+          echo "previous=${LATEST:-none}"
+          echo "tag=$NEW_TAG"
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      # ── 3. Set up Go ────────────────────────────────────────────────
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod   # honours the 'go' directive in go.mod
+          cache: true
+
+      # ── 4. Build for all platforms ──────────────────────────────────
+      - name: Build binaries
+        env:
+          VERSION: ${{ steps.version.outputs.tag }}
+          LDFLAGS: -s -w -X main.version=${{ steps.version.outputs.tag }}
+        run: |
+          mkdir -p dist
+
+          echo "Building $VERSION …"
+
+          GOOS=windows GOARCH=amd64 go build -ldflags="$LDFLAGS" \
+            -o dist/androidbackup-windows-amd64.exe .
+
+          GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" \
+            -o dist/androidbackup-linux-amd64 .
+
+          GOOS=linux GOARCH=arm64 go build -ldflags="$LDFLAGS" \
+            -o dist/androidbackup-linux-arm64 .
+
+          GOOS=darwin GOARCH=amd64 go build -ldflags="$LDFLAGS" \
+            -o dist/androidbackup-darwin-amd64 .
+
+          GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" \
+            -o dist/androidbackup-darwin-arm64 .
+
+          echo "Built artifacts:"
+          ls -lh dist/
+
+      # ── 5. Collect commit messages for the release body ─────────────
+      - name: Build changelog
+        id: changelog
+        run: |
+          PREV=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          if [ -z "$PREV" ]; then
+            LOG=$(git log --oneline | head -20)
+          else
+            LOG=$(git log "${PREV}..HEAD" --oneline)
+          fi
+          # Escape for multiline GitHub output
+          echo "log<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$LOG"     >> "$GITHUB_OUTPUT"
+          echo "EOF"      >> "$GITHUB_OUTPUT"
+
+      # ── 6. Create GitHub release with binaries ──────────────────────
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body: |
+            ## Changes
+            ```
+            ${{ steps.changelog.outputs.log }}
+            ```
+
+            ## Downloads
+
+            | Platform | Architecture | Binary |
+            |----------|--------------|--------|
+            | Windows  | x64          | `androidbackup-windows-amd64.exe` |
+            | Linux    | x64          | `androidbackup-linux-amd64` |
+            | Linux    | ARM64        | `androidbackup-linux-arm64` |
+            | macOS    | x64          | `androidbackup-darwin-amd64` |
+            | macOS    | Apple Silicon| `androidbackup-darwin-arm64` |
+
+            ## Requirements
+            - [ADB (Android Debug Bridge)](https://developer.android.com/tools/releases/platform-tools) must be installed and in your `PATH`
+
+            ## Usage
+            ```
+            # Windows
+            .\androidbackup-windows-amd64.exe
+
+            # Linux / macOS (make executable first)
+            chmod +x androidbackup-linux-amd64
+            ./androidbackup-linux-amd64
+            ```
+            Opens at **http://localhost:8765**
+          files: |
+            dist/androidbackup-windows-amd64.exe
+            dist/androidbackup-linux-amd64
+            dist/androidbackup-linux-arm64
+            dist/androidbackup-darwin-amd64
+            dist/androidbackup-darwin-arm64
+          draft: false
+          prerelease: false
+          make_latest: true

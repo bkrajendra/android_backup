@@ -77,58 +77,131 @@
 
   </aside>
 
-  <!-- CENTER: Transfer Setup + Queue -->
+  <!-- CENTER: Tabbed panel -->
   <main class="flex-1 flex flex-col overflow-hidden">
 
-    <!-- Transfer Setup Bar -->
-    <div class="border-b border-gray-800 px-6 py-4">
-      <div class="flex gap-4 items-end">
-        <div class="flex-1">
-          <label class="text-xs text-gray-400 mb-1 block">Source (Android)</label>
-          <div class="flex gap-1">
-            <input id="remote-dir" type="text" placeholder="/sdcard/DCIM/Camera"
-              class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-3 py-2 focus:outline-none focus:border-green-500 text-gray-200 placeholder-gray-600 font-mono" />
-            <button onclick="useSelectedAndroid()"
-              class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 transition" title="Use current Android path">
-              ← Use
-            </button>
-          </div>
-        </div>
-
-        <div class="flex-1">
-          <label class="text-xs text-gray-400 mb-1 block">Destination (Local)</label>
-          <div class="flex gap-1">
-            <input id="local-dir" type="text" placeholder="C:\Users\...\CameraBackup"
-              class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-3 py-2 focus:outline-none focus:border-green-500 text-gray-200 placeholder-gray-600 font-mono" />
-            <button onclick="openLocalBrowser()"
-              class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 transition">Browse</button>
-          </div>
-        </div>
-
-        <button onclick="startTransfer()"
-          class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded transition">
-          Start Transfer
-        </button>
-      </div>
+    <!-- Tab bar -->
+    <div class="border-b border-gray-800 flex items-center px-4 gap-1 shrink-0">
+      <button id="tab-btn-transfer" onclick="switchTab('transfer')"
+        class="px-4 py-3 text-xs font-medium border-b-2 border-green-500 text-white transition">
+        Transfers
+      </button>
+      <button id="tab-btn-viewer" onclick="switchTab('viewer')"
+        class="px-4 py-3 text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-300 transition">
+        Viewer
+      </button>
     </div>
 
-    <!-- Transfer Queue -->
-    <div class="flex-1 overflow-y-auto scrollbar p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-sm font-semibold text-gray-300">Transfers</h2>
-        <div class="flex items-center gap-3">
-          <span id="transfer-count" class="text-xs text-gray-500"></span>
-          <button id="clear-btn" onclick="clearFinished()" style="display:none"
-            class="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition">
-            Clear finished
+    <!-- TRANSFER TAB -->
+    <div id="tab-transfer" class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Transfer Setup Bar -->
+      <div class="border-b border-gray-800 px-6 py-4 shrink-0">
+        <div class="flex gap-4 items-end">
+          <div class="flex-1">
+            <label class="text-xs text-gray-400 mb-1 block">Source (Android)</label>
+            <div class="flex gap-1">
+              <input id="remote-dir" type="text" placeholder="/sdcard/DCIM/Camera"
+                class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-3 py-2 focus:outline-none focus:border-green-500 text-gray-200 placeholder-gray-600 font-mono" />
+              <button onclick="useSelectedAndroid()"
+                class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 transition" title="Use current Android path">
+                ← Use
+              </button>
+            </div>
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-gray-400 mb-1 block">Destination (Local)</label>
+            <div class="flex gap-1">
+              <input id="local-dir" type="text" placeholder="C:\Users\...\CameraBackup"
+                class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-3 py-2 focus:outline-none focus:border-green-500 text-gray-200 placeholder-gray-600 font-mono" />
+              <button onclick="openLocalBrowser()"
+                class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 transition">Browse</button>
+            </div>
+          </div>
+          <button onclick="startTransfer()"
+            class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded transition">
+            Start Transfer
           </button>
         </div>
       </div>
-      <div id="transfer-list" class="space-y-3"></div>
-      <div id="no-transfers" class="text-center text-gray-600 text-sm mt-16">
-        No transfers yet. Select a source and destination, then click <em>Start Transfer</em>.
+
+      <!-- Transfer Queue -->
+      <div class="flex-1 overflow-y-auto scrollbar p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-gray-300">Transfers</h2>
+          <div class="flex items-center gap-3">
+            <span id="transfer-count" class="text-xs text-gray-500"></span>
+            <button id="clear-btn" onclick="clearFinished()" style="display:none"
+              class="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition">
+              Clear finished
+            </button>
+          </div>
+        </div>
+        <div id="transfer-list" class="space-y-3"></div>
+        <div id="no-transfers" class="text-center text-gray-600 text-sm mt-16">
+          No transfers yet. Select a source and destination, then click <em>Start Transfer</em>.
+        </div>
       </div>
-    </div>
+
+    </div><!-- /tab-transfer -->
+
+    <!-- VIEWER TAB -->
+    <div id="tab-viewer" class="flex-1 flex flex-col overflow-hidden hidden">
+
+      <!-- File info bar -->
+      <div id="viewer-bar" class="shrink-0 border-b border-gray-800 px-6 py-3 flex items-center gap-3 min-h-[49px]">
+        <div id="viewer-meta" class="flex-1 min-w-0">
+          <p class="text-xs text-gray-500">No file selected — click a file in the Android browser.</p>
+        </div>
+        <button id="viewer-refresh-btn" onclick="viewerRefresh()" style="display:none"
+          class="text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition"
+          title="Re-pull from device">
+          ↺ Refresh
+        </button>
+      </div>
+
+      <!-- Content area -->
+      <div id="viewer-content" class="flex-1 overflow-hidden flex items-center justify-center bg-gray-950 relative">
+        <!-- Empty state -->
+        <div id="viewer-empty" class="text-center text-gray-700 select-none">
+          <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <p class="text-sm">Select a file from the Android browser</p>
+        </div>
+        <!-- Loading state -->
+        <div id="viewer-loading" class="hidden text-center text-gray-500">
+          <svg class="w-8 h-8 mx-auto mb-3 spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <p class="text-xs">Pulling from device…</p>
+        </div>
+        <!-- Error state -->
+        <div id="viewer-error" class="hidden text-center text-red-400 px-8">
+          <p class="text-sm font-medium mb-1">Could not load file</p>
+          <p id="viewer-error-msg" class="text-xs text-red-500/70"></p>
+        </div>
+        <!-- Image viewer -->
+        <img id="viewer-img" class="hidden max-w-full max-h-full object-contain select-none"
+          style="image-rendering:auto" />
+        <!-- Video viewer -->
+        <video id="viewer-video" class="hidden max-w-full max-h-full" controls></video>
+        <!-- Audio viewer -->
+        <audio id="viewer-audio" class="hidden w-full max-w-md" controls></audio>
+        <!-- PDF viewer -->
+        <iframe id="viewer-pdf" class="hidden w-full h-full border-0"></iframe>
+        <!-- Text viewer -->
+        <pre id="viewer-text"
+          class="hidden absolute inset-0 overflow-auto p-6 text-xs text-gray-300 font-mono leading-relaxed whitespace-pre-wrap break-words bg-gray-950"></pre>
+        <!-- Unsupported -->
+        <div id="viewer-unsupported" class="hidden text-center text-gray-600">
+          <p class="text-sm">Preview not available for this file type.</p>
+          <p id="viewer-unsupported-ext" class="text-xs mt-1 text-gray-700"></p>
+        </div>
+      </div>
+    </div><!-- /tab-viewer -->
 
   </main>
 
@@ -140,7 +213,16 @@
     </div>
     <div id="local-path" class="px-4 py-2 text-xs text-blue-400 font-mono truncate"></div>
     <div id="local-browser" class="flex-1 overflow-y-auto scrollbar px-2 pb-2 space-y-0.5"></div>
-    <div class="p-3 border-t border-gray-800">
+    <div class="p-3 border-t border-gray-800 space-y-2">
+      <div class="flex gap-1">
+        <input id="new-folder-name" type="text" placeholder="New folder name"
+          class="flex-1 text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 text-gray-200 placeholder-gray-600"
+          onkeydown="if(event.key==='Enter') createLocalFolder()" />
+        <button onclick="createLocalFolder()"
+          class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 transition" title="Create folder">
+          + New
+        </button>
+      </div>
       <button onclick="selectLocalDir()"
         class="w-full text-sm py-2 bg-blue-600 hover:bg-blue-500 rounded text-white font-medium transition">
         Select This Folder
@@ -191,6 +273,8 @@ const state = {
   selectedAndroidPath: null,
   localBrowserPath: '',
   localBrowserPathStack: [],
+  expandedLogs: {},      // id → { filter: 'recent'|'failed'|'all', offset: 0 }
+  logRefreshTimers: {},  // id → setInterval handle
   renameTarget: null,
   deleteTarget: null,
   transfers: {},
@@ -397,7 +481,9 @@ function browseUp() {
 
 function selectAndroidFile(path) {
   state.selectedAndroidPath = path;
-  toast(`Selected: ${path}`, 'info');
+  if (state.selectedDevice) {
+    viewFile(state.selectedDevice.serial, path);
+  }
 }
 
 function useSelectedAndroid() {
@@ -463,6 +549,24 @@ function browseLocalUp() {
   parts.pop();
   const parent = parts.join('/');
   browseLocal(parent.includes(':') && !parent.includes('/') ? parent + '\\' : parent);
+}
+
+async function createLocalFolder() {
+  const name = document.getElementById('new-folder-name').value.trim();
+  if (!name) { toast('Enter a folder name', 'warn'); return; }
+  if (!state.localBrowserPath) { toast('Navigate into a parent folder first', 'warn'); return; }
+
+  const sep = state.localBrowserPath.endsWith('\\') || state.localBrowserPath.endsWith('/') ? '' : '\\';
+  const newPath = state.localBrowserPath + sep + name;
+
+  try {
+    await api('POST', '/api/local/mkdir', { path: newPath });
+    document.getElementById('new-folder-name').value = '';
+    toast(`Created: ${name}`, 'success');
+    browseLocal(state.localBrowserPath); // refresh listing
+  } catch (e) {
+    toast(e.message, 'error');
+  }
 }
 
 function selectLocalDir() {
@@ -537,6 +641,137 @@ async function confirmDelete() {
 // ============================================================
 // TRANSFERS
 // ============================================================
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name) {
+  const tabs = ['transfer', 'viewer'];
+  tabs.forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== name);
+    const btn = document.getElementById(`tab-btn-${t}`);
+    if (t === name) {
+      btn.classList.add('border-green-500', 'text-white');
+      btn.classList.remove('border-transparent', 'text-gray-500');
+    } else {
+      btn.classList.remove('border-green-500', 'text-white');
+      btn.classList.add('border-transparent', 'text-gray-500');
+    }
+  });
+}
+
+// ============================================================
+// VIEWER
+// ============================================================
+const IMAGE_EXTS  = new Set(['jpg','jpeg','png','gif','webp','bmp','heic','heif']);
+const VIDEO_EXTS  = new Set(['mp4','m4v','mov','mkv','avi','3gp','webm']);
+const AUDIO_EXTS  = new Set(['mp3','aac','m4a','ogg','flac','wav']);
+const TEXT_EXTS   = new Set(['txt','log','xml','json','csv','md','ini','conf','yaml','yml','sh','py','js','ts','html','css']);
+
+function fileTypeOf(path) {
+  const ext = (path.split('.').pop() || '').toLowerCase();
+  if (IMAGE_EXTS.has(ext)) return 'image';
+  if (VIDEO_EXTS.has(ext)) return 'video';
+  if (AUDIO_EXTS.has(ext)) return 'audio';
+  if (ext === 'pdf')        return 'pdf';
+  if (TEXT_EXTS.has(ext))   return 'text';
+  return 'unknown';
+}
+
+const VIEWER_IDS = ['img','video','audio','pdf','text','empty','loading','error','unsupported'];
+function viewerShowOnly(id) {
+  VIEWER_IDS.forEach(k => {
+    const el = document.getElementById(`viewer-${k}`);
+    if (el) el.classList.toggle('hidden', k !== id);
+  });
+}
+
+// Remember what's currently loaded so Refresh knows what to reload
+state.currentViewer = null;
+
+async function viewFile(serial, remotePath, forceRefresh = false) {
+  switchTab('viewer');
+  state.currentViewer = { serial, remotePath };
+
+  const name = remotePath.split('/').pop();
+  const type = fileTypeOf(remotePath);
+  const refreshBtn = document.getElementById('viewer-refresh-btn');
+
+  // Update info bar
+  document.getElementById('viewer-meta').innerHTML =
+    `<span class="text-xs font-medium text-gray-200 truncate">${esc(name)}</span>
+     <span class="text-[10px] text-gray-600 font-mono ml-2">${type}</span>`;
+  if (refreshBtn) refreshBtn.style.display = '';
+
+  if (type === 'unknown') {
+    viewerShowOnly('unsupported');
+    document.getElementById('viewer-unsupported-ext').textContent =
+      '.' + (remotePath.split('.').pop() || '?');
+    return;
+  }
+
+  // Text: fetch as text and display inline
+  if (type === 'text') {
+    viewerShowOnly('loading');
+    try {
+      const url = viewUrl(serial, remotePath, forceRefresh);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(await res.text());
+      const text = await res.text();
+      viewerShowOnly('text');
+      document.getElementById('viewer-text').textContent = text;
+    } catch (e) {
+      viewerShowOnly('error');
+      document.getElementById('viewer-error-msg').textContent = e.message;
+    }
+    return;
+  }
+
+  // Binary: set src and let browser load it
+  const url = viewUrl(serial, remotePath, forceRefresh);
+  viewerShowOnly('loading');
+
+  if (type === 'image') {
+    const img = document.getElementById('viewer-img');
+    img.onload  = () => viewerShowOnly('img');
+    img.onerror = () => { viewerShowOnly('error'); document.getElementById('viewer-error-msg').textContent = 'Failed to load image'; };
+    img.src = url;
+
+  } else if (type === 'video') {
+    const vid = document.getElementById('viewer-video');
+    vid.oncanplay = () => viewerShowOnly('video');
+    vid.onerror   = () => { viewerShowOnly('error'); document.getElementById('viewer-error-msg').textContent = 'Failed to load video'; };
+    vid.pause();
+    vid.removeAttribute('src');
+    vid.load();
+    vid.src = url;
+    vid.load();
+
+  } else if (type === 'audio') {
+    const aud = document.getElementById('viewer-audio');
+    aud.oncanplay = () => viewerShowOnly('audio');
+    aud.onerror   = () => { viewerShowOnly('error'); document.getElementById('viewer-error-msg').textContent = 'Failed to load audio'; };
+    aud.pause();
+    aud.src = url;
+    aud.load();
+
+  } else if (type === 'pdf') {
+    const iframe = document.getElementById('viewer-pdf');
+    iframe.onload = () => viewerShowOnly('pdf');
+    iframe.src = url;
+  }
+}
+
+function viewUrl(serial, remotePath, forceRefresh = false) {
+  const base = `/api/android/view?serial=${encodeURIComponent(serial)}&path=${encodeURIComponent(remotePath)}`;
+  return forceRefresh ? base + '&refresh=1' : base;
+}
+
+function viewerRefresh() {
+  if (state.currentViewer) {
+    viewFile(state.currentViewer.serial, state.currentViewer.remotePath, true);
+  }
+}
+
 async function startTransfer() {
   const remoteDir = document.getElementById('remote-dir').value.trim();
   const localDir = document.getElementById('local-dir').value.trim();
@@ -552,6 +787,7 @@ async function startTransfer() {
     });
     state.transfers[t.id] = t;
     renderTransfers();
+    switchTab('transfer');
     toast('Transfer started', 'success');
   } catch (e) {
     toast(e.message, 'error');
@@ -598,6 +834,9 @@ async function clearFinished() {
 async function removeTransfer(id) {
   try {
     await api('POST', `/api/transfers/${id}/remove`, {});
+    clearInterval(state.logRefreshTimers[id]);
+    delete state.logRefreshTimers[id];
+    delete state.expandedLogs[id];
     delete state.transfers[id];
     const card = document.getElementById(`tc-${id}`);
     if (card) {
@@ -622,7 +861,16 @@ function buildTransferCard(t) {
         <div class="text-xs font-mono text-gray-400 truncate" title="${esc(t.remoteDir)}">${esc(t.remoteDir)}</div>
         <div class="text-[10px] text-gray-600 font-mono truncate mt-0.5" title="${esc(t.localDir)}">→ ${esc(t.localDir)}</div>
       </div>
-      <span id="tc-status-${t.id}" class="text-xs font-medium shrink-0 capitalize"></span>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="tc-status-${t.id}" class="text-xs font-medium capitalize"></span>
+        <button onclick="toggleLog('${t.id}')" id="tc-chevron-btn-${t.id}"
+          class="text-gray-600 hover:text-gray-300 transition p-0.5 rounded hidden"
+          title="Show file log">
+          <svg id="tc-chevron-${t.id}" class="w-4 h-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <div id="tc-progress-${t.id}" class="hidden">
       <div class="flex justify-between text-[10px] text-gray-500 mb-1">
@@ -636,7 +884,24 @@ function buildTransferCard(t) {
       <div id="tc-stats-${t.id}" class="flex gap-3 text-[10px] text-gray-600 mb-2"></div>
     </div>
     <p id="tc-error-${t.id}" class="hidden text-xs text-red-400 mb-2"></p>
-    <div id="tc-controls-${t.id}" class="flex gap-2"></div>`;
+    <div id="tc-controls-${t.id}" class="flex gap-2 mb-0"></div>
+    <!-- File log panel -->
+    <div id="tc-log-${t.id}" class="hidden mt-3 border-t border-gray-800 pt-3">
+      <div class="flex items-center gap-2 mb-2">
+        <div class="flex rounded overflow-hidden border border-gray-700 text-[10px]">
+          <button onclick="setLogFilter('${t.id}','recent')" id="tc-f-recent-${t.id}"
+            class="px-2 py-1 transition">Recent</button>
+          <button onclick="setLogFilter('${t.id}','failed')" id="tc-f-failed-${t.id}"
+            class="px-2 py-1 transition">Failed</button>
+          <button onclick="setLogFilter('${t.id}','all')" id="tc-f-all-${t.id}"
+            class="px-2 py-1 transition">All</button>
+        </div>
+        <span id="tc-log-count-${t.id}" class="text-[10px] text-gray-600 ml-auto"></span>
+      </div>
+      <div id="tc-log-rows-${t.id}"
+        class="font-mono text-[10px] leading-5 bg-gray-950 rounded-lg p-2 max-h-52 overflow-y-auto scrollbar space-y-px">
+      </div>
+    </div>`;
   return div;
 }
 
@@ -701,6 +966,12 @@ function patchTransferCard(t) {
     else errEl.classList.add('hidden');
   }
 
+  // Show chevron once the transfer has files to inspect
+  const chevBtn = document.getElementById(`tc-chevron-btn-${t.id}`);
+  if (chevBtn && t.status !== 'pending' && t.totalFiles > 0) {
+    chevBtn.classList.remove('hidden');
+  }
+
   // Controls
   const ctrl = document.getElementById(`tc-controls-${t.id}`);
   if (ctrl) {
@@ -724,6 +995,116 @@ function patchTransferCard(t) {
       ctrl.innerHTML = '';
     }
   }
+}
+
+// ============================================================
+// FILE LOG
+// ============================================================
+function toggleLog(id) {
+  const panel = document.getElementById(`tc-log-${id}`);
+  const chevron = document.getElementById(`tc-chevron-${id}`);
+  if (!panel) return;
+
+  const isOpen = !panel.classList.contains('hidden');
+  if (isOpen) {
+    panel.classList.add('hidden');
+    chevron && (chevron.style.transform = '');
+    clearInterval(state.logRefreshTimers[id]);
+    delete state.logRefreshTimers[id];
+    delete state.expandedLogs[id];
+  } else {
+    panel.classList.remove('hidden');
+    chevron && (chevron.style.transform = 'rotate(180deg)');
+    state.expandedLogs[id] = { filter: 'recent', offset: 0 };
+    applyLogFilterStyle(id, 'recent');
+    loadLogFiles(id);
+    // Auto-refresh while the transfer is running
+    const t = state.transfers[id];
+    if (t && (t.status === 'running' || t.status === 'scanning')) {
+      state.logRefreshTimers[id] = setInterval(() => {
+        const cur = state.transfers[id];
+        if (!cur || (cur.status !== 'running' && cur.status !== 'scanning')) {
+          clearInterval(state.logRefreshTimers[id]);
+          delete state.logRefreshTimers[id];
+          loadLogFiles(id); // one final refresh
+          return;
+        }
+        loadLogFiles(id);
+      }, 1500);
+    }
+  }
+}
+
+function setLogFilter(id, filter) {
+  if (!state.expandedLogs[id]) return;
+  state.expandedLogs[id].filter = filter;
+  state.expandedLogs[id].offset = 0;
+  applyLogFilterStyle(id, filter);
+  loadLogFiles(id);
+}
+
+function applyLogFilterStyle(id, active) {
+  ['recent','failed','all'].forEach(f => {
+    const btn = document.getElementById(`tc-f-${f}-${id}`);
+    if (!btn) return;
+    btn.className = `px-2 py-1 transition ${f === active
+      ? 'bg-gray-700 text-white'
+      : 'bg-transparent text-gray-500 hover:text-gray-300'}`;
+  });
+}
+
+async function loadLogFiles(id) {
+  const logState = state.expandedLogs[id];
+  if (!logState) return;
+  const { filter, offset } = logState;
+  try {
+    const res = await api('GET',
+      `/api/transfers/${id}/files?filter=${filter}&offset=${offset}&limit=80`);
+    renderLogRows(id, res);
+  } catch (_) {}
+}
+
+function renderLogRows(id, res) {
+  const rows = document.getElementById(`tc-log-rows-${id}`);
+  const countEl = document.getElementById(`tc-log-count-${id}`);
+  if (!rows) return;
+
+  const { total, items } = res;
+  if (countEl) countEl.textContent = total ? `${items.length} of ${total}` : 'no files';
+
+  if (!items || items.length === 0) {
+    rows.innerHTML = `<div class="text-gray-600 px-1 py-2 text-center">No files to show</div>`;
+    return;
+  }
+
+  const statusIcon = {
+    done:    '<span class="text-green-500">✓</span>',
+    skipped: '<span class="text-blue-400">↷</span>',
+    failed:  '<span class="text-red-500">✗</span>',
+    running: '<span class="text-yellow-400 spin inline-block">⟳</span>',
+    pending: '<span class="text-gray-600">·</span>',
+  };
+  const statusText = {
+    done:    'text-gray-400',
+    skipped: 'text-blue-400/70',
+    failed:  'text-red-400',
+    running: 'text-yellow-300',
+    pending: 'text-gray-600',
+  };
+
+  rows.innerHTML = items.map(f => {
+    const name = f.remotePath.split('/').pop();
+    const icon = statusIcon[f.status] || statusIcon.pending;
+    const cls  = statusText[f.status]  || statusText.pending;
+    const sz   = f.size > 0 ? formatBytes(f.size) : '';
+    const err  = f.error ? `<span class="text-red-500/70 ml-2">${esc(f.error)}</span>` : '';
+    return `<div class="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-gray-800/50">
+      <span class="w-3 text-center shrink-0">${icon}</span>
+      <span class="flex-1 truncate ${cls}" title="${esc(f.remotePath)}">${esc(name)}</span>
+      <span class="text-gray-600 shrink-0 w-14 text-right">${sz}</span>
+      ${err}
+    </div>`;
+  }).join('');
 }
 
 function renderTransfers() {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -138,6 +139,58 @@ func handleLocalBrowse(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, result)
 }
 
+func handleAndroidView(w http.ResponseWriter, r *http.Request) {
+	serial := r.URL.Query().Get("serial")
+	remotePath := r.URL.Query().Get("path")
+	if serial == "" || remotePath == "" {
+		errResp(w, 400, "serial and path required")
+		return
+	}
+
+	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(remotePath), "."))
+	ct := ExtContentType(ext)
+
+	cachedPath := ViewCachePath(serial, remotePath)
+
+	// Re-pull when caller requests a refresh or file is not in cache
+	if r.URL.Query().Get("refresh") == "1" {
+		_ = os.Remove(cachedPath)
+	}
+	if _, err := os.Stat(cachedPath); os.IsNotExist(err) {
+		if err := PullFile(serial, remotePath, cachedPath); err != nil {
+			errResp(w, 502, "adb pull failed: "+err.Error())
+			return
+		}
+	}
+
+	f, err := os.Open(cachedPath)
+	if err != nil {
+		errResp(w, 500, err.Error())
+		return
+	}
+	defer f.Close()
+
+	stat, _ := f.Stat()
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Cache-Control", "no-store")
+	http.ServeContent(w, r, filepath.Base(remotePath), stat.ModTime(), f)
+}
+
+func handleLocalMkdir(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Path string `json:"path"` // full path of the new folder to create
+	}
+	if err := readBody(r, &body); err != nil || body.Path == "" {
+		errResp(w, 400, "path required")
+		return
+	}
+	if err := os.MkdirAll(body.Path, 0755); err != nil {
+		errResp(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]string{"path": body.Path})
+}
+
 // ---- device handlers ----
 
 func handleListDevices(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +298,7 @@ func makeTransferHandlers(tm *TransferManager) func(mux *http.ServeMux) {
 		mux.HandleFunc("/api/transfers", func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
-				writeJSON(w, 200, tm.List())
+				writeJSON(w, 200, tm.ListSummaries())
 			case http.MethodPost:
 				var body struct {
 					DeviceSerial string `json:"deviceSerial"`
@@ -313,6 +366,23 @@ func makeTransferHandlers(tm *TransferManager) func(mux *http.ServeMux) {
 					return
 				}
 				writeJSON(w, 200, t)
+			case "files":
+				if r.Method != http.MethodGet {
+					errResp(w, 405, "method not allowed")
+					return
+				}
+				q := r.URL.Query()
+				filter := q.Get("filter")
+				offset := 0
+				limit := 100
+				fmt.Sscan(q.Get("offset"), &offset)
+				fmt.Sscan(q.Get("limit"), &limit)
+				result, err := tm.GetFiles(id, filter, offset, limit)
+				if err != nil {
+					errResp(w, 404, err.Error())
+					return
+				}
+				writeJSON(w, 200, result)
 			case "remove":
 				if err := tm.Remove(id); err != nil {
 					errResp(w, 400, err.Error())

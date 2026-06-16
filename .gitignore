@@ -1,1 +1,9 @@
-/dist
+# Built binaries
+/dist/
+*.exe
+
+# ADB view cache (temp files pulled for viewer)
+# (lives in %TEMP% on Windows, so not tracked anyway)
+
+# Transfer state
+androidbackup_state.json

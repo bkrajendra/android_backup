@@ -2,6 +2,8 @@
 
 Copy photos and files from your Android device to your PC via a web interface — with folder browsing, pause/resume transfers, file management, and Wi-Fi ADB support.
 
+![Android Backup screenshot](docs/screen-shot.png)
+
 ---
 
 ## Prerequisites
